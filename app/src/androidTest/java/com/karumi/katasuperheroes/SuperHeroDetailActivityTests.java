@@ -19,6 +19,7 @@ package com.karumi.katasuperheroes;
 import android.content.Intent;
 import android.support.test.InstrumentationRegistry;
 import android.support.test.espresso.IdlingResource;
+import android.support.test.espresso.matcher.ViewMatchers;
 import android.support.test.rule.ActivityTestRule;
 import android.support.test.runner.AndroidJUnit4;
 import android.test.suitebuilder.annotation.LargeTest;
@@ -26,9 +27,14 @@ import com.karumi.katasuperheroes.di.MainComponent;
 import com.karumi.katasuperheroes.di.MainModule;
 import com.karumi.katasuperheroes.model.SuperHero;
 import com.karumi.katasuperheroes.model.SuperHeroesRepository;
+import com.karumi.katasuperheroes.ui.view.MainActivity;
 import com.karumi.katasuperheroes.ui.view.SuperHeroDetailActivity;
 import it.cosenonjaviste.daggermock.DaggerMockRule;
+
+import java.util.LinkedList;
 import java.util.List;
+
+import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
@@ -40,7 +46,9 @@ import static android.support.test.espresso.Espresso.onView;
 import static android.support.test.espresso.Espresso.unregisterIdlingResources;
 import static android.support.test.espresso.action.ViewActions.scrollTo;
 import static android.support.test.espresso.assertion.ViewAssertions.matches;
+import static android.support.test.espresso.matcher.ViewMatchers.hasDescendant;
 import static android.support.test.espresso.matcher.ViewMatchers.isDisplayed;
+import static android.support.test.espresso.matcher.ViewMatchers.withEffectiveVisibility;
 import static android.support.test.espresso.matcher.ViewMatchers.withId;
 import static android.support.test.espresso.matcher.ViewMatchers.withText;
 import static com.karumi.katasuperheroes.matchers.ToolbarMatcher.onToolbarWithTitle;
@@ -50,6 +58,7 @@ import static org.mockito.Mockito.when;
 
 @RunWith(AndroidJUnit4.class) @LargeTest public class SuperHeroDetailActivityTests {
 
+  private static final int NUMBER_OF_SUPER_HEROES = 11;
   @Rule public DaggerMockRule<MainComponent> daggerRule =
       new DaggerMockRule<>(MainComponent.class, new MainModule()).set(
           new DaggerMockRule.ComponentSetter<MainComponent>() {
@@ -123,6 +132,36 @@ import static org.mockito.Mockito.when;
     startActivity(superHero);
 
     onView(withId(R.id.iv_avengers_badge)).check(matches(isDisplayed()));
+  }
+
+  @Test public void showHeroIsNotAvenger(){
+    int heroIndex = 2;
+    List<SuperHero> superHeroes = newListOfHeroesNotAvengers(NUMBER_OF_SUPER_HEROES);
+    startActivity();
+    final SuperHero superHero = superHeroes.get(heroIndex);
+
+    onView(allOf(withId(R.id.recycler_view), hasDescendant(withText(superHero.getName())))).check(matches(hasDescendant(Matchers.allOf(withId(R.id.iv_avengers_badge),
+            withEffectiveVisibility(ViewMatchers.Visibility.GONE)))));
+  }
+  private List<SuperHero> newListOfHeroesNotAvengers(int numberOfHeroes){
+    return createSuperHeroeList(numberOfHeroes, false);
+  }
+
+  private List<SuperHero> createSuperHeroeList(int numberOfHeroes, boolean avenger){
+    List<SuperHero> superHeroesList = new LinkedList<>();
+    for (int i = 0; i < numberOfHeroes; i++) {
+      String superHeroeName = "SuperHeroName" + i;
+      String icono = "https://www.google.es/imgres?imgurl=http%3A%2F%2Fblogs.deia.com%2Fdiseno-a-sorbos%2Ffiles%2F2015%2F04%2FCalico-450.jpg&imgrefurl=http%3A%2F%2Fblogs.deia.com%2Fdiseno-a-sorbos%2F2015%2F04%2F14%2Fadios-a-calico-electronico%2F&docid=QSeiISHtJRXm_M&tbnid=A4DvBm6NRqHFqM%3A&vet=10ahUKEwi5wdKliKLXAhUCwxQKHYfFCd4QMwgxKAswCw..i&w=450&h=252&client=firefox-b-ab&bih=1175&biw=1093&q=calicoelectronico&ved=0ahUKEwi5wdKliKLXAhUCwxQKHYfFCd4QMwgxKAswCw&iact=mrc&uact=8";
+      SuperHero superHero = new SuperHero(superHeroeName, icono,
+              avenger, "SuperDescription number " +i);
+      superHeroesList.add(superHero);
+      when(repository.getByName(superHeroeName)).thenReturn(superHero);
+    }
+    when(repository.getAll()).thenReturn(superHeroesList);
+    return superHeroesList;
+  }
+  private SuperHeroDetailActivity startActivity() {
+    return activityRule.launchActivity(null);
   }
 
   private SuperHero givenThereIsASuperHero() {
